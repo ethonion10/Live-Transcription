@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Transcription with Apertium Translation</title>
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 600px;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      resize: none;
+      font-size: 16px;
+    }
+    #translation {
+      background-color: #e9f7ef;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Live Transcription with Apertium Translation</h1>
+    <div>
+      <button onclick="startTranscription()">Start Transcription</button>
+      <button onclick="stopTranscription()">Stop Transcription</button>
+    </div>
+    <div>
+      <h3>Detected Text:</h3>
+      <textarea id="transcription" rows="4" readonly></textarea>
+    </div>
+    <div>
+      <h3>Translated Text:</h3>
+      <textarea id="translation" rows="4" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    // Speech Recognition Setup
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'es-ES'; // Set recognition language to Spanish
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onresult = async (event) => {
+      const detectedText = event.results[event.results.length - 1][0].transcript.trim();
+      document.getElementById('transcription').value = detectedText;
+
+      try {
+        const translatedText = await translateWithApertium(detectedText);
+        document.getElementById('translation').value = translatedText;
+      } catch (error) {
+        console.error('Translation error:', error);
+        document.getElementById('translation').value = 'Translation not available.';
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event);
+    };
+
+    function startTranscription() {
+      document.getElementById('transcription').value = '';
+      document.getElementById('translation').value = '';
+      recognition.start();
+    }
+
+    function stopTranscription() {
+      recognition.stop();
+    }
+
+    // Apertium API Translation
+    async function translateWithApertium(text) {
+      const apiUrl = `https://apertium.org/apy/translate?q=${encodeURIComponent(text)}&langpair=es|en`;
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error('Translation API error');
+      const data = await response.json();
+      if (data.responseStatus !== 200 || !data.responseData.translatedText) {
+        throw new Error('No translation available');
+      }
+      return data.responseData.translatedText;
+    }
+  </script>
+</body>
+</html>
